@@ -1,0 +1,16 @@
+{
+  "name": "quick-drop",
+  "version": "1.0.0",
+  "description": "Aplikasi web pribadi untuk sinkronisasi teks clipboard, copy gambar instan, dan pengiriman file lintas perangkat (HP ke Laptop atau sebaliknya) **meskipun berbeda jaringan Wi-Fi**.",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.6"
+  }
+}

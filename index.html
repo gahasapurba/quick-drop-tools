@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>QuickDrop — Cross-Device Cloud Clipboard</title>
+  <meta name="description" content="Kirim teks, copy gambar, dan transfer file instan antar device beda jaringan via Supabase Realtime">
+  <link rel="stylesheet" href="style.css">
+  <!-- Supabase JS Client v2 CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <h1 class="brand-title">QuickDrop</h1>
+          <div class="brand-tag">
+            <span class="status-dot" id="statusIndicator"></span>
+            <span id="statusText">Menghubungkan ke Supabase...</span>
+          </div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="action-btn" onclick="fetchDrops()" title="Refresh">🔄 <span>Sync</span></button>
+        <button class="icon-btn" onclick="openSettings()" title="Pengaturan Kredensial Supabase">⚙️</button>
+      </div>
+    </header>
+
+    <!-- Storage Usage Meter -->
+    <div class="storage-meter-card" id="storageMeterCard">
+      <div class="storage-meter-header">
+        <div class="storage-title">
+          <span>💾 Storage Supabase (Maks 1 GB)</span>
+        </div>
+        <span class="storage-val" id="storageValText">0 MB / 1 GB (0%)</span>
+      </div>
+      <div class="storage-progress-track">
+        <div class="storage-progress-bar" id="storageProgressBar" style="width: 0%;"></div>
+      </div>
+    </div>
+
+    <!-- Storage Warning Banner -->
+    <div class="storage-warning-banner" id="storageWarningBanner" style="display: none;">
+      <span class="warning-icon" id="warningIcon">⚠️</span>
+      <div class="warning-text" id="warningText">
+        <strong>Storage Hampir Penuh!</strong>
+        <p>Kapasitas tersisa sedikit. Pertimbangkan menghapus file lama.</p>
+      </div>
+      <button class="action-btn btn-delete" onclick="clearAllDrops()" style="padding: 0.35rem 0.65rem; font-size: 0.75rem;">Bersihkan</button>
+    </div>
+
+    <!-- Drop Composer (Area Input) -->
+    <section class="composer-card">
+      <div class="composer-tabs">
+        <button class="tab-btn active" data-tab="text">📝 Teks</button>
+        <button class="tab-btn" data-tab="file">📎 Gambar / File</button>
+      </div>
+
+      <!-- Tab Teks -->
+      <div class="tab-content active" id="textTab">
+        <div class="text-input-wrap">
+          <textarea id="dropText" placeholder="Ketik atau paste teks di sini... (Tekan Cmd+Enter untuk kirim)" rows="3"></textarea>
+        </div>
+      </div>
+
+      <!-- Tab File / Gambar -->
+      <div class="tab-content" id="fileTab">
+        <div class="dropzone" id="dropzone">
+          <div class="dropzone-icon">📥</div>
+          <div class="dropzone-text">Sentuh untuk pilih Foto / File (Bisa pilih banyak sekaligus)</div>
+          <div class="dropzone-sub">Atau Drag & Drop banyak file ke sini, atau Cmd+V paste gambar</div>
+          <input type="file" id="fileInput" multiple style="display: none;">
+        </div>
+
+        <div class="files-preview-container" id="filesPreviewContainer" style="display: none;">
+          <div class="files-preview-header">
+            <span id="previewCountText" style="font-size: 0.82rem; font-weight: 600; color: var(--text-muted);"></span>
+            <button class="clear-btn" onclick="resetFileInput()" style="font-size: 0.78rem;">Batalkan Semua</button>
+          </div>
+          <div class="files-preview-grid" id="filesPreviewGrid"></div>
+        </div>
+      </div>
+
+      <div class="composer-footer">
+        <span class="quick-hint">Tips: Paste (Cmd+V) jalan otomatis di mana saja</span>
+        <button class="btn-primary" id="sendDropBtn" onclick="sendDrop()">
+          🚀 Kirim Drop
+        </button>
+      </div>
+    </section>
+
+    <!-- Stream / Feed -->
+    <div class="feed-header">
+      <span class="feed-title">Riwayat Clipboard</span>
+      <button class="clear-btn" onclick="clearAllDrops()">Bersihkan Semua</button>
+    </div>
+
+    <div class="stream-list" id="streamList">
+      <!-- Items will be injected here -->
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <div class="empty-state-icon">📬</div>
+      <p>Belum ada teks atau file yang dikirim.</p>
+      <span style="font-size: 0.8rem;">Ketik teks atau kirim gambar dari HP untuk mulai sinkronisasi!</span>
+    </div>
+  </div>
+
+  <!-- Modal Pengaturan Supabase -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">⚙️ Konfigurasi Supabase</h2>
+        <button class="icon-btn" onclick="closeSettings()" style="width: 28px; height: 28px;">✕</button>
+      </div>
+      <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5;">
+        Kredensial disimpan aman di <b>localStorage browser Anda</b> (tidak akan tersimpan ke GitHub / server).
+      </p>
+
+      <div class="form-group">
+        <label for="supabaseUrlInput">Project URL</label>
+        <input type="text" id="supabaseUrlInput" class="form-input" placeholder="https://xxxxxx.supabase.co">
+      </div>
+
+      <div class="form-group">
+        <label for="supabaseKeyInput">Anon / Public API Key</label>
+        <input type="password" id="supabaseKeyInput" class="form-input" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6...">
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+        <button class="action-btn" onclick="closeSettings()">Batal</button>
+        <button class="btn-primary" onclick="saveSettings()">Simpan & Hubungkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

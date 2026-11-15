@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# Netlify local files
+.netlify/
+
+# Local sensitive configuration (do not commit)
+config.js
+
+# OS files
+.DS_Store
+Thumbs.db
